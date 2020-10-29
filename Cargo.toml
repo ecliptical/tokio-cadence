@@ -2,6 +2,7 @@
 name = "tokio-cadence"
 description = "Tokio-based metric sinks for Cadence "
 version = "0.1.0"
+repository = "https://github.com/ecliptical/tokio-cadence"
 authors = ["Peter Nehrer <pnehrer@eclipticalsoftware.com>"]
 license = "MIT"
 keywords = ["cadence", "statsd", "metrics", "async", "tokio"]
