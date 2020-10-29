@@ -1,7 +1,10 @@
 [package]
 name = "tokio-cadence"
+description = "Tokio-based metric sinks for Cadence "
 version = "0.1.0"
 authors = ["Peter Nehrer <pnehrer@eclipticalsoftware.com>"]
+license = "MIT"
+keywords = ["cadence", "statsd", "metrics", "async", "tokio"]
 edition = "2018"
 
 [dependencies]
