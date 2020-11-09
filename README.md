@@ -73,4 +73,4 @@ the completion of the processing job *after* the client, as well as the sink alo
 
 ## License
 
-Licensed under the MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT).
+Licensed under the [MIT license](LICENSE).
