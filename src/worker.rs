@@ -1,5 +1,3 @@
-//! TODO docs!
-use log::*;
 use std::{
     io::{
         Error,
@@ -14,17 +12,9 @@ use std::{
     process::abort,
 };
 
-use tokio::{
-    sync::mpsc::{
-        error::TrySendError,
-        Receiver,
-        Sender,
-    },
-    time::{
-        timeout_at,
-        Duration,
-        Instant,
-    },
+use tokio::sync::mpsc::{
+    error::TrySendError,
+    Sender,
 };
 
 #[derive(Clone, Debug)]
@@ -65,10 +55,13 @@ pub trait TrySend: UnwindSafe + RefUnwindSafe {
     }
 }
 
-// yes, really! :-(
-macro_rules! worker {
+// Yes, really! :-(
+// I can't figure out how to genericize these functions without boxing futures or copying bytes...
+#[doc(hidden)]
+#[macro_export]
+macro_rules! define_worker {
     ($SocketType:ty, $TargetType:ty) => {
-        worker!($SocketType, $TargetType, &$TargetType);
+        $crate::define_worker!($SocketType, $TargetType, &$TargetType);
     };
 
     ($SocketType:ty, $TargetType:ty, $TargetTypeRef:ty) => {
@@ -96,7 +89,11 @@ macro_rules! worker {
             max_delay: ::tokio::time::Duration,
         ) {
             use ::log::*;
-            use ::tokio::time::Instant;
+            use ::tokio::time::{
+                timeout_at,
+                Instant,
+            };
+
             use $crate::worker::Cmd;
 
             let mut buf = String::with_capacity(buf_size);
@@ -181,7 +178,6 @@ mod tests {
             Mutex,
         },
         time::Duration,
-        spawn,
     };
 
     struct TestSocket {
@@ -200,11 +196,11 @@ mod tests {
         }
     }
 
-    worker!(TestSocket, String);
+    define_worker!(TestSocket, String);
 
     #[tokio::test]
-    async fn send_single_line() {
-        let (mut tx, rx) = mpsc::channel(10);
+    async fn handle_single_item() {
+        let (mut tx, rx) = mpsc::channel(1);
         let items = Arc::new(Mutex::new(Vec::default()));
         let socket = TestSocket {
             items: items.clone(),
@@ -224,5 +220,84 @@ mod tests {
         .await;
 
         assert_eq!(vec!["test1".to_string()], *items.lock().await);
+    }
+
+    #[tokio::test]
+    async fn handle_multi_item() {
+        let (mut tx, rx) = mpsc::channel(2);
+        let items = Arc::new(Mutex::new(Vec::default()));
+        let socket = TestSocket {
+            items: items.clone(),
+        };
+
+        tx.send(Cmd::Write("test1".to_string())).await.unwrap();
+        tx.send(Cmd::Write("test2".to_string())).await.unwrap();
+
+        drop(tx);
+
+        worker(
+            rx,
+            socket,
+            String::default(),
+            11,
+            Duration::from_millis(100),
+        )
+        .await;
+
+        assert_eq!(vec!["test1\ntest2".to_string()], *items.lock().await);
+    }
+
+    #[tokio::test]
+    async fn handle_full_buffer() {
+        let (mut tx, rx) = mpsc::channel(2);
+        let items = Arc::new(Mutex::new(Vec::default()));
+        let socket = TestSocket {
+            items: items.clone(),
+        };
+
+        tx.send(Cmd::Write("test1".to_string())).await.unwrap();
+        tx.send(Cmd::Write("test2".to_string())).await.unwrap();
+
+        drop(tx);
+
+        worker(
+            rx,
+            socket,
+            String::default(),
+            10,
+            Duration::from_millis(100),
+        )
+        .await;
+
+        assert_eq!(
+            vec!["test1".to_string(), "test2".to_string()],
+            *items.lock().await
+        );
+    }
+
+    #[tokio::test]
+    async fn handle_over_buffer_capacity() {
+        let (mut tx, rx) = mpsc::channel(1);
+        let items = Arc::new(Mutex::new(Vec::default()));
+        let socket = TestSocket {
+            items: items.clone(),
+        };
+
+        tx.send(Cmd::Write("test1test2test3".to_string()))
+            .await
+            .unwrap();
+
+        drop(tx);
+
+        worker(
+            rx,
+            socket,
+            String::default(),
+            10,
+            Duration::from_millis(100),
+        )
+        .await;
+
+        assert!(items.lock().await.is_empty());
     }
 }

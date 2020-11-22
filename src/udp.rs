@@ -1,4 +1,4 @@
-//! TODO docs!
+//! Asynchronous Metric Sink implementation that uses UDP sockets.
 
 use cadence::{
     ErrorKind as MetricErrorKind,
@@ -26,18 +26,14 @@ use tokio::{
     net::UdpSocket,
     sync::mpsc::{
         channel,
-        Receiver,
         Sender,
     },
-    time::{
-        timeout_at,
-        Duration,
-        Instant,
-    },
+    time::Duration,
 };
 
 use crate::{
     builder::Builder,
+    define_worker,
     worker::{
         Cmd,
         TrySend,
@@ -45,7 +41,7 @@ use crate::{
 };
 
 impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
-    /// TODO docs!
+    /// Creates a customized instance of the [TokioBatchUdpMetricSink](crate::udp::TokioBatchUdpMetricSink).
     pub fn build(
         self,
     ) -> MetricResult<(
@@ -58,13 +54,13 @@ impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
         })?;
 
         let (tx, rx) = channel(self.queue_cap);
-        let worker_fut = worker(rx, addr, self.sock, self.buf_size, self.max_delay);
+        let worker_fut = worker(rx, self.sock, addr, self.buf_size, self.max_delay);
 
         Ok((TokioBatchUdpMetricSink { tx }, Box::pin(worker_fut)))
     }
 }
 
-/// Metric sink that allows clients to enqueue metrics without blocking, and processing
+/// Metric sink that allows clients to enqueue metrics without blocking, and sending
 /// them asynchronously via UDP using Tokio runtime.
 ///
 /// It also accumulates individual metrics for a configured maximum amount of time
@@ -134,6 +130,13 @@ impl TokioBatchUdpMetricSink {
         Builder::new(host, socket).build()
     }
 
+    /// Returns a builder for creating a new metric sink for the given statsd host
+    /// using a previously bound UDP socket. The builder may be used to customize various
+    /// configuration parameters before creating an instance of this sink.
+    pub fn builder<T: ToSocketAddrs>(host: T, socket: UdpSocket) -> Builder<T, UdpSocket> {
+        Builder::new(host, socket)
+    }
+
     /// Creates a new metric sink for the given statsd host, using the UDP socket, as well as
     /// metric queue capacity, batch buffer size, and maximum delay (in milliseconds) to wait
     /// before submitting any accumulated metrics as a batch.
@@ -174,88 +177,7 @@ impl MetricSink for TokioBatchUdpMetricSink {
     }
 }
 
-async fn do_send(socket: &mut UdpSocket, addr: &SocketAddr, buf: &mut String) {
-    match socket.send_to(buf.as_bytes(), addr).await {
-        Ok(n) => {
-            debug!("sent {} bytes", n);
-        }
-
-        Err(e) => {
-            error!("failed to send metrics: {:?}", e);
-        }
-    }
-
-    buf.clear();
-}
-
-async fn worker(
-    mut rx: Receiver<Cmd>,
-    addr: SocketAddr,
-    mut socket: UdpSocket,
-    buf_size: usize,
-    max_delay: Duration,
-) {
-    let mut buf = String::with_capacity(buf_size);
-    let now = Instant::now();
-    let mut deadline = now.checked_add(max_delay).unwrap_or(now);
-    loop {
-        match timeout_at(deadline, rx.recv()).await {
-            Ok(Some(Cmd::Write(msg))) => {
-                trace!("write: {}", msg);
-
-                let msg_len = msg.len();
-                if msg_len > buf.capacity() {
-                    warn!("metric exceeds buffer capacity: {}", msg);
-                } else {
-                    let buf_len = buf.len();
-                    if buf_len > 0 {
-                        if buf_len + 1 + msg_len > buf.capacity() {
-                            do_send(&mut socket, &addr, &mut buf).await;
-                            let now = Instant::now();
-                            deadline = now.checked_add(max_delay).unwrap_or(now);
-                        } else {
-                            buf.push('\n');
-                        }
-                    }
-
-                    buf.push_str(&msg);
-                }
-            }
-
-            Ok(Some(Cmd::Flush)) => {
-                trace!("flush");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                let now = Instant::now();
-                deadline = now.checked_add(max_delay).unwrap_or(now);
-            }
-
-            Ok(None) => {
-                debug!("stop");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                break;
-            }
-
-            Err(_) => {
-                trace!("timeout");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                let now = Instant::now();
-                deadline = now.checked_add(max_delay).unwrap_or(now);
-            }
-        }
-    }
-}
+define_worker!(UdpSocket, SocketAddr);
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,4 @@
-//! TODO docs!
+//! Asynchronous Metric Sink implementation that uses Unix Datagram sockets.
 
 use cadence::{
     MetricResult,
@@ -21,18 +21,13 @@ use tokio::{
     net::UnixDatagram,
     sync::mpsc::{
         channel,
-        Receiver,
         Sender,
-    },
-    time::{
-        timeout_at,
-        Duration,
-        Instant,
     },
 };
 
 use crate::{
     builder::Builder,
+    define_worker,
     worker::{
         Cmd,
         TrySend,
@@ -40,7 +35,7 @@ use crate::{
 };
 
 impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
-    /// TODO docs!
+    /// Creates a customized instance of the [TokioBatchUnixMetricSink](crate::unix::TokioBatchUnixMetricSink).
     pub fn build(
         self,
     ) -> MetricResult<(
@@ -48,14 +43,15 @@ impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
         Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
     )> {
         let (tx, rx) = channel(self.queue_cap);
-        let worker_fut = worker(rx, self.addr, self.sock, self.buf_size, self.max_delay);
+        let worker_fut = worker(rx, self.sock, self.addr, self.buf_size, self.max_delay);
 
         Ok((TokioBatchUnixMetricSink { tx }, Box::pin(worker_fut)))
     }
 }
 
-/// Metric sink that allows clients to enqueue metrics without blocking, and processing
-/// them asynchronously over a Unix Domain Socket using Tokio runtime.
+/// Metric sink that allows clients to enqueue metrics without blocking, and sending
+/// them asynchronously over a [Unix Domain Socket](https://docs.datadoghq.com/developers/dogstatsd/unix_socket)
+/// using Tokio runtime.
 ///
 /// It also accumulates individual metrics for a configured maximum amount of time
 /// before submitting them as a single [batch](https://github.com/statsd/statsd/blob/master/docs/metric_types.md#multi-metric-packets).
@@ -112,24 +108,26 @@ impl UnwindSafe for TokioBatchUnixMetricSink {}
 impl RefUnwindSafe for TokioBatchUnixMetricSink {}
 
 impl TokioBatchUnixMetricSink {
-    /// Creates a new metric sink for the given statsd host using a previously bound Unix socket.
+    /// Creates a new metric sink for the given statsd socket path using an unbound Unix socket.
     /// Other sink parameters are defaulted.
     pub fn from<T: AsRef<Path> + Send + Sync + Unpin + 'static>(
-        host: T,
+        path: T,
         socket: UnixDatagram,
     ) -> MetricResult<(
         Self,
         Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
     )> {
-        Self::builder(host, socket).build()
+        Self::builder(path, socket).build()
     }
 
-    /// TODO docs!
+    /// Returns a builder for creating a new metric sink for the given statsd socket path
+    /// using an unbound Unix socket. The builder may be used to customize various
+    /// configuration parameters before creating an instance of this sink.
     pub fn builder<T: AsRef<Path> + Send + Sync + Unpin + 'static>(
         path: T,
-        sock: UnixDatagram,
+        socket: UnixDatagram,
     ) -> Builder<T, UnixDatagram> {
-        Builder::new(path, sock)
+        Builder::new(path, socket)
     }
 }
 
@@ -151,88 +149,11 @@ impl MetricSink for TokioBatchUnixMetricSink {
     }
 }
 
-async fn do_send<T: AsRef<Path> + Unpin>(socket: &mut UnixDatagram, addr: &T, buf: &mut String) {
-    match socket.send_to(buf.as_bytes(), addr).await {
-        Ok(n) => {
-            debug!("sent {} bytes", n);
-        }
-
-        Err(e) => {
-            error!("failed to send metrics: {:?}", e);
-        }
-    }
-
-    buf.clear();
-}
-
-async fn worker(
-    mut rx: Receiver<Cmd>,
-    addr: impl AsRef<Path> + Unpin,
-    mut socket: UnixDatagram,
-    buf_size: usize,
-    max_delay: Duration,
-) {
-    let mut buf = String::with_capacity(buf_size);
-    let now = Instant::now();
-    let mut deadline = now.checked_add(max_delay).unwrap_or(now);
-    loop {
-        match timeout_at(deadline, rx.recv()).await {
-            Ok(Some(Cmd::Write(msg))) => {
-                trace!("write: {}", msg);
-
-                let msg_len = msg.len();
-                if msg_len > buf.capacity() {
-                    warn!("metric exceeds buffer capacity: {}", msg);
-                } else {
-                    let buf_len = buf.len();
-                    if buf_len > 0 {
-                        if buf_len + 1 + msg_len > buf.capacity() {
-                            do_send(&mut socket, &addr, &mut buf).await;
-                            let now = Instant::now();
-                            deadline = now.checked_add(max_delay).unwrap_or(now);
-                        } else {
-                            buf.push('\n');
-                        }
-                    }
-
-                    buf.push_str(&msg);
-                }
-            }
-
-            Ok(Some(Cmd::Flush)) => {
-                trace!("flush");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                let now = Instant::now();
-                deadline = now.checked_add(max_delay).unwrap_or(now);
-            }
-
-            Ok(None) => {
-                debug!("stop");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                break;
-            }
-
-            Err(_) => {
-                trace!("timeout");
-
-                if !buf.is_empty() {
-                    do_send(&mut socket, &addr, &mut buf).await;
-                }
-
-                let now = Instant::now();
-                deadline = now.checked_add(max_delay).unwrap_or(now);
-            }
-        }
-    }
-}
+define_worker!(
+    UnixDatagram,
+    impl AsRef<Path> + Unpin,
+    impl AsRef<Path> + Unpin
+);
 
 #[cfg(test)]
 mod tests {
