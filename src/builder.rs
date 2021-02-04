@@ -2,11 +2,7 @@
 
 use tokio::time::Duration;
 
-use crate::{
-    DEFAULT_BATCH_BUF_SIZE,
-    DEFAULT_MAX_BATCH_DELAY,
-    DEFAULT_QUEUE_CAPACITY,
-};
+use crate::{DEFAULT_BATCH_BUF_SIZE, DEFAULT_MAX_BATCH_DELAY, DEFAULT_QUEUE_CAPACITY};
 
 /// Builder allows you to override various default parameter values before creating an instance
 /// of the desired Metric Sink.

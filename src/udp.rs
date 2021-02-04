@@ -1,43 +1,26 @@
 //! Asynchronous Metric Sink implementation that uses UDP sockets.
 
-use cadence::{
-    ErrorKind as MetricErrorKind,
-    MetricError,
-    MetricResult,
-    MetricSink,
-};
+use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};
 
 use log::*;
 use std::{
     future::Future,
     io::Result,
-    net::{
-        SocketAddr,
-        ToSocketAddrs,
-    },
-    panic::{
-        RefUnwindSafe,
-        UnwindSafe,
-    },
+    net::{SocketAddr, ToSocketAddrs},
+    panic::{RefUnwindSafe, UnwindSafe},
     pin::Pin,
 };
 
 use tokio::{
     net::UdpSocket,
-    sync::mpsc::{
-        channel,
-        Sender,
-    },
+    sync::mpsc::{channel, Sender},
     time::Duration,
 };
 
 use crate::{
     builder::Builder,
     define_worker,
-    worker::{
-        Cmd,
-        TrySend,
-    },
+    worker::{Cmd, TrySend},
 };
 
 impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
@@ -182,10 +165,7 @@ define_worker!(UdpSocket, SocketAddr);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::{
-        net::UdpSocket,
-        spawn,
-    };
+    use tokio::{net::UdpSocket, spawn};
 
     #[tokio::test]
     async fn from() -> MetricResult<()> {
@@ -211,7 +191,7 @@ mod tests {
     async fn emit() -> MetricResult<()> {
         pretty_env_logger::try_init().ok();
 
-        let mut server_socket = UdpSocket::bind("127.0.0.1:0").await?;
+        let server_socket = UdpSocket::bind("127.0.0.1:0").await?;
         let server_addr = server_socket.local_addr()?;
 
         debug!("server socket: {}", server_addr);
@@ -251,7 +231,7 @@ mod tests {
     async fn emit_multi() -> MetricResult<()> {
         pretty_env_logger::try_init().ok();
 
-        let mut server_socket = UdpSocket::bind("127.0.0.1:0").await?;
+        let server_socket = UdpSocket::bind("127.0.0.1:0").await?;
         let server_addr = server_socket.local_addr()?;
 
         debug!("server socket: {}", server_addr);

@@ -1,21 +1,10 @@
 use std::{
-    io::{
-        Error,
-        ErrorKind,
-        Result,
-    },
-    panic::{
-        catch_unwind,
-        RefUnwindSafe,
-        UnwindSafe,
-    },
+    io::{Error, ErrorKind, Result},
+    panic::{catch_unwind, RefUnwindSafe, UnwindSafe},
     process::abort,
 };
 
-use tokio::sync::mpsc::{
-    error::TrySendError,
-    Sender,
-};
+use tokio::sync::mpsc::{error::TrySendError, Sender};
 
 #[derive(Clone, Debug)]
 pub enum Cmd {
@@ -29,7 +18,7 @@ pub trait TrySend: UnwindSafe + RefUnwindSafe {
     fn try_send(&self, cmd: Cmd) -> Result<()> {
         // self.tx is !RefUnwindSafe -- don't let it panic!
         let wrapped = catch_unwind(|| {
-            let mut tx = self.sender().clone();
+            let tx = self.sender().clone();
             tx.try_send(cmd)
         });
 
@@ -89,10 +78,7 @@ macro_rules! define_worker {
             max_delay: ::tokio::time::Duration,
         ) {
             use ::log::*;
-            use ::tokio::time::{
-                timeout_at,
-                Instant,
-            };
+            use ::tokio::time::{timeout_at, Instant};
 
             use $crate::worker::Cmd;
 
@@ -164,19 +150,12 @@ macro_rules! define_worker {
 mod tests {
     use super::*;
     use std::{
-        io::{
-            Error,
-            ErrorKind,
-            Result,
-        },
+        io::{Error, ErrorKind, Result},
         sync::Arc,
     };
 
     use tokio::{
-        sync::{
-            mpsc,
-            Mutex,
-        },
+        sync::{mpsc, Mutex},
         time::Duration,
     };
 
@@ -200,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn handle_single_item() {
-        let (mut tx, rx) = mpsc::channel(1);
+        let (tx, rx) = mpsc::channel(1);
         let items = Arc::new(Mutex::new(Vec::default()));
         let socket = TestSocket {
             items: items.clone(),
@@ -224,7 +203,7 @@ mod tests {
 
     #[tokio::test]
     async fn handle_multi_item() {
-        let (mut tx, rx) = mpsc::channel(2);
+        let (tx, rx) = mpsc::channel(2);
         let items = Arc::new(Mutex::new(Vec::default()));
         let socket = TestSocket {
             items: items.clone(),
@@ -249,7 +228,7 @@ mod tests {
 
     #[tokio::test]
     async fn handle_full_buffer() {
-        let (mut tx, rx) = mpsc::channel(2);
+        let (tx, rx) = mpsc::channel(2);
         let items = Arc::new(Mutex::new(Vec::default()));
         let socket = TestSocket {
             items: items.clone(),
@@ -277,7 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn handle_over_buffer_capacity() {
-        let (mut tx, rx) = mpsc::channel(1);
+        let (tx, rx) = mpsc::channel(1);
         let items = Arc::new(Mutex::new(Vec::default()));
         let socket = TestSocket {
             items: items.clone(),
