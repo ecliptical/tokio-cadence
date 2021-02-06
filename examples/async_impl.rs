@@ -1,17 +1,11 @@
-use cadence::{
-    prelude::*,
-    StatsdClient,
-};
+use cadence::{prelude::*, StatsdClient};
 
 use log::*;
 use std::{
     error::Error,
     io::BufRead,
     sync::{
-        atomic::{
-            AtomicUsize,
-            Ordering,
-        },
+        atomic::{AtomicUsize, Ordering},
         Arc,
     },
     time::Instant,
@@ -20,10 +14,7 @@ use std::{
 use tokio::{
     net::UdpSocket,
     spawn,
-    time::{
-        delay_for,
-        Duration,
-    },
+    time::{sleep, Duration},
 };
 
 use tokio_cadence::*;
@@ -45,7 +36,7 @@ async fn run(client: StatsdClient) -> Result<(), Box<dyn Error + Send + Sync + '
         let task = spawn(async move {
             for _ in 0..NUM_LOOPS {
                 client.incr_with_tags(COUNT_METRIC).send();
-                delay_for(LOOP_DELAY).await;
+                sleep(LOOP_DELAY).await;
             }
         });
 
@@ -68,7 +59,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let client_socket = UdpSocket::bind("127.0.0.1:0").await?;
     let client_addr = client_socket.local_addr()?;
 
-    let mut server_socket = UdpSocket::bind("127.0.0.1:0").await?;
+    let server_socket = UdpSocket::bind("127.0.0.1:0").await?;
     let server_addr = server_socket.local_addr()?;
 
     let recv_count = Arc::new(AtomicUsize::default());
@@ -126,7 +117,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 
     processing_job.await?;
 
-    delay_for(CATCHUP_DELAY).await;
+    sleep(CATCHUP_DELAY).await;
 
     info!("sent count: {}", NUM_TASKS * NUM_LOOPS);
 

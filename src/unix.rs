@@ -1,37 +1,25 @@
 //! Asynchronous Metric Sink implementation that uses Unix Datagram sockets.
 
-use cadence::{
-    MetricResult,
-    MetricSink,
-};
+use cadence::{MetricResult, MetricSink};
 
 use log::*;
 use std::{
     future::Future,
     io::Result,
-    panic::{
-        RefUnwindSafe,
-        UnwindSafe,
-    },
+    panic::{RefUnwindSafe, UnwindSafe},
     path::Path,
     pin::Pin,
 };
 
 use tokio::{
     net::UnixDatagram,
-    sync::mpsc::{
-        channel,
-        Sender,
-    },
+    sync::mpsc::{channel, Sender},
 };
 
 use crate::{
     builder::Builder,
     define_worker,
-    worker::{
-        Cmd,
-        TrySend,
-    },
+    worker::{Cmd, TrySend},
 };
 
 impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
@@ -158,14 +146,8 @@ define_worker!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{
-        env::temp_dir,
-        time::UNIX_EPOCH,
-    };
-    use tokio::{
-        net::UnixDatagram,
-        spawn,
-    };
+    use std::{env::temp_dir, time::UNIX_EPOCH};
+    use tokio::{net::UnixDatagram, spawn};
 
     #[tokio::test]
     async fn from() -> MetricResult<()> {
@@ -189,7 +171,7 @@ mod tests {
             "test_emit-{}.sock",
             UNIX_EPOCH.elapsed().unwrap_or_default().as_millis()
         ));
-        let mut server_socket = UnixDatagram::bind(&path)?;
+        let server_socket = UnixDatagram::bind(&path)?;
 
         let socket = UnixDatagram::unbound()?;
 
@@ -227,7 +209,7 @@ mod tests {
             "test_emit_multi-{}.sock",
             UNIX_EPOCH.elapsed().unwrap_or_default().as_millis()
         ));
-        let mut server_socket = UnixDatagram::bind(&path)?;
+        let server_socket = UnixDatagram::bind(&path)?;
 
         let socket = UnixDatagram::unbound()?;
 
