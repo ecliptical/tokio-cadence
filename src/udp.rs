@@ -2,7 +2,6 @@
 
 use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};
 
-use log::*;
 use std::{
     future::Future,
     io::Result,
@@ -24,13 +23,24 @@ use crate::{
 };
 
 impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
-    /// Creates a customized instance of the [TokioBatchUdpMetricSink](crate::udp::TokioBatchUdpMetricSink).
+    /// Creates a customized instance of the [`TokioBatchUdpMetricSink`](crate::udp::TokioBatchUdpMetricSink).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when unable to resolve the configured host address, or when the configured queue capacity is 0.
     pub fn build(
         self,
     ) -> MetricResult<(
         TokioBatchUdpMetricSink,
         Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
     )> {
+        if self.queue_cap == 0 {
+            return Err(MetricError::from((
+                MetricErrorKind::InvalidInput,
+                "Queue capacity must be greater than 0",
+            )));
+        }
+
         let mut addrs = self.addr.to_socket_addrs()?;
         let addr = addrs.next().ok_or_else(|| {
             MetricError::from((MetricErrorKind::InvalidInput, "No socket addresses yielded"))
@@ -103,6 +113,10 @@ impl RefUnwindSafe for TokioBatchUdpMetricSink {}
 impl TokioBatchUdpMetricSink {
     /// Creates a new metric sink for the given statsd host using a previously bound UDP socket.
     /// Other sink parameters are defaulted.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when unable to resolve the configured host address.
     pub fn from<T: ToSocketAddrs>(
         host: T,
         socket: UdpSocket,
@@ -123,6 +137,10 @@ impl TokioBatchUdpMetricSink {
     /// Creates a new metric sink for the given statsd host, using the UDP socket, as well as
     /// metric queue capacity, batch buffer size, and maximum delay (in milliseconds) to wait
     /// before submitting any accumulated metrics as a batch.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when unable to resolve the given host address, or when the queue capacity is 0.
     #[deprecated = "please use `with_options` instead"]
     pub fn with_capacity<T: ToSocketAddrs>(
         host: T,
@@ -165,6 +183,7 @@ define_worker!(UdpSocket, SocketAddr);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use log::debug;
     use tokio::{net::UdpSocket, spawn};
 
     #[tokio::test]

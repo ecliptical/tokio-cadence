@@ -1,8 +1,7 @@
 //! Asynchronous Metric Sink implementation that uses Unix Datagram sockets.
 
-use cadence::{MetricResult, MetricSink};
+use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};
 
-use log::*;
 use std::{
     future::Future,
     io::Result,
@@ -23,13 +22,24 @@ use crate::{
 };
 
 impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
-    /// Creates a customized instance of the [TokioBatchUnixMetricSink](crate::unix::TokioBatchUnixMetricSink).
+    /// Creates a customized instance of the [`TokioBatchUnixMetricSink`](crate::unix::TokioBatchUnixMetricSink).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the configured queue capacity is 0.
     pub fn build(
         self,
     ) -> MetricResult<(
         TokioBatchUnixMetricSink,
         Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
     )> {
+        if self.queue_cap == 0 {
+            return Err(MetricError::from((
+                MetricErrorKind::InvalidInput,
+                "Queue capacity must be greater than 0",
+            )));
+        }
+
         let (tx, rx) = channel(self.queue_cap);
         let worker_fut = worker(rx, self.sock, self.addr, self.buf_size, self.max_delay);
 
@@ -98,6 +108,10 @@ impl RefUnwindSafe for TokioBatchUnixMetricSink {}
 impl TokioBatchUnixMetricSink {
     /// Creates a new metric sink for the given statsd socket path using an unbound Unix socket.
     /// Other sink parameters are defaulted.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error
     pub fn from<T: AsRef<Path> + Send + Sync + Unpin + 'static>(
         path: T,
         socket: UnixDatagram,
@@ -146,6 +160,7 @@ define_worker!(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use log::debug;
     use std::{env::temp_dir, time::UNIX_EPOCH};
     use tokio::{net::UnixDatagram, spawn};
 

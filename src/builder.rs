@@ -26,19 +26,19 @@ impl<T, S> Builder<T, S> {
         }
     }
 
-    /// Sets the maximum metric queue capacity (default: [DEFAULT_QUEUE_CAPACITY](crate::DEFAULT_QUEUE_CAPACITY)).
+    /// Sets the maximum metric queue capacity (default: [`DEFAULT_QUEUE_CAPACITY`](crate::DEFAULT_QUEUE_CAPACITY)).
     pub fn queue_cap(&mut self, queue_cap: usize) -> &mut Self {
         self.queue_cap = queue_cap;
         self
     }
 
-    /// Sets the batch buffer size (default: [DEFAULT_BATCH_BUF_SIZE](crate::DEFAULT_BATCH_BUF_SIZE)).
+    /// Sets the batch buffer size (default: [`DEFAULT_BATCH_BUF_SIZE`](crate::DEFAULT_BATCH_BUF_SIZE)).
     pub fn buf_size(&mut self, buf_size: usize) -> &mut Self {
         self.buf_size = buf_size;
         self
     }
 
-    /// Sets the maximum delay before flushing any buffered metrics (default: [DEFAULT_MAX_BATCH_DELAY](crate::DEFAULT_MAX_BATCH_DELAY)).
+    /// Sets the maximum delay before flushing any buffered metrics (default: [`DEFAULT_MAX_BATCH_DELAY`](crate::DEFAULT_MAX_BATCH_DELAY)).
     pub fn max_delay(&mut self, max_delay: Duration) -> &mut Self {
         self.max_delay = max_delay;
         self

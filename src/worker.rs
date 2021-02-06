@@ -55,7 +55,7 @@ macro_rules! define_worker {
 
     ($SocketType:ty, $TargetType:ty, $TargetTypeRef:ty) => {
         async fn do_send(socket: &mut $SocketType, addr: $TargetTypeRef, buf: &mut String) {
-            use ::log::*;
+            use ::log::{debug, error};
 
             match socket.send_to(buf.as_bytes(), addr).await {
                 Ok(n) => {
@@ -77,7 +77,7 @@ macro_rules! define_worker {
             buf_size: usize,
             max_delay: ::tokio::time::Duration,
         ) {
-            use ::log::*;
+            use ::log::{debug, trace, warn};
             use ::tokio::time::{timeout_at, Instant};
 
             use $crate::worker::Cmd;
