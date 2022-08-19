@@ -31,6 +31,7 @@ async fn run(client: StatsdClient) -> Result<(), Box<dyn Error + Send + Sync + '
     let mut tasks = Vec::with_capacity(NUM_TASKS);
     let start = Instant::now();
 
+    let client = Arc::new(client);
     for _ in 0..NUM_TASKS {
         let client = client.clone();
         let task = spawn(async move {
@@ -72,30 +73,27 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
             if addr == client_addr {
                 debug!("data: {}", String::from_utf8_lossy(&buf[..n]));
 
-                &buf[..n]
-                    .lines()
-                    .filter_map(|line| {
-                        line.ok().and_then(|line| {
-                            let parts: Vec<_> = line.splitn(2, ':').collect();
-                            parts.get(1).and_then(|suffix| {
-                                let value_parts: Vec<_> = suffix.splitn(3, '|').take(2).collect();
-                                value_parts
-                                    .get(1)
-                                    .filter(|&suffix| *suffix == "c")
-                                    .map(|_| {
-                                        (
-                                            parts[0].to_string(),
-                                            value_parts[0].parse::<usize>().unwrap_or_default(),
-                                        )
-                                    })
-                            })
+                for (key, value) in buf[..n].lines().filter_map(|line| {
+                    line.ok().and_then(|line| {
+                        let parts: Vec<_> = line.splitn(2, ':').collect();
+                        parts.get(1).and_then(|suffix| {
+                            let value_parts: Vec<_> = suffix.splitn(3, '|').take(2).collect();
+                            value_parts
+                                .get(1)
+                                .filter(|&suffix| *suffix == "c")
+                                .map(|_| {
+                                    (
+                                        parts[0].to_string(),
+                                        value_parts[0].parse::<usize>().unwrap_or_default(),
+                                    )
+                                })
                         })
                     })
-                    .for_each(|(key, value)| {
-                        if key == FULL_COUNT_METRIC {
-                            recv_count.fetch_add(value, Ordering::AcqRel);
-                        }
-                    });
+                }) {
+                    if key == FULL_COUNT_METRIC {
+                        recv_count.fetch_add(value, Ordering::AcqRel);
+                    }
+                }
             }
         }
     });
