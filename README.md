@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/tokio-cadence.svg)](https://crates.io/crates/tokio-cadence/)
 [![Docs.rs](https://docs.rs/tokio-cadence/badge.svg)](https://docs.rs/tokio-cadence/)
 
-A collection of [Cadence](https://crates.io/crates/cadence/) [Metric Sink](https://docs.rs/cadence/0.22/cadence/trait.MetricSink.html)
+A collection of [Cadence](https://crates.io/crates/cadence/) [Metric Sink](https://docs.rs/cadence/0.29/cadence/trait.MetricSink.html)
 implementations that process metrics asynchronously using [Tokio](https://crates.io/crates/tokio/).
 
 The Statsd client provided by Cadence does not support asynchronous operation -- submitting a metric may in fact block the caller!
@@ -25,9 +25,9 @@ Add `cadence`, `tokio`, and `tokio-cadence` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cadence = "0.24"
-tokio = { version = "1.1", features = ["full"] }
-tokio-cadence = "0.3"
+cadence = "0.29"
+tokio = { version = "1", features = ["full"] }
+tokio-cadence = "0.4"
 ```
 
 ## Usage

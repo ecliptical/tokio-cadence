@@ -1,12 +1,12 @@
 [package]
 name = "tokio-cadence"
 description = "Tokio-based metric sinks for Cadence "
-version = "0.3.0"
+version = "0.4.0"
 repository = "https://github.com/ecliptical/tokio-cadence"
 authors = ["Peter Nehrer <pnehrer@eclipticalsoftware.com>"]
 license = "MIT"
 keywords = ["cadence", "statsd", "metrics", "async", "tokio"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 cadence = "0.29"
