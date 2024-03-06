@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 //! Asynchronous Metric Sink implementation that uses Unix Datagram sockets.
 
 use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};

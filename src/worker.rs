@@ -35,7 +35,7 @@ pub trait TrySend: UnwindSafe + RefUnwindSafe {
             }
 
             Err(e) => {
-                eprintln!("panic while attempting to enqueue statsd metric: {:?}", e);
+                eprintln!("panic while attempting to enqueue statsd metric: {e:?}");
                 abort();
             }
         }
@@ -48,6 +48,7 @@ pub trait TrySend: UnwindSafe + RefUnwindSafe {
 // I can't figure out how to genericize these functions without boxing futures or copying bytes...
 #[doc(hidden)]
 #[macro_export]
+#[allow(clippy::module_name_repetitions)]
 macro_rules! define_worker {
     ($SocketType:ty, $TargetType:ty) => {
         $crate::define_worker!($SocketType, $TargetType, &$TargetType);
