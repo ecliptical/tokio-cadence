@@ -9,7 +9,7 @@ keywords = ["cadence", "statsd", "metrics", "async", "tokio"]
 edition = "2021"
 
 [dependencies]
-cadence = "0.29"
+cadence = "1.2"
 log = "0.4"
 tokio = { version = "1", features = ["net", "sync", "time"] }
 
