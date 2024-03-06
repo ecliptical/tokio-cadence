@@ -7,6 +7,7 @@ authors = ["Peter Nehrer <pnehrer@eclipticalsoftware.com>"]
 license = "MIT"
 keywords = ["cadence", "statsd", "metrics", "async", "tokio"]
 edition = "2021"
+rust-version = "1.63"
 
 [dependencies]
 cadence = "1.2"
