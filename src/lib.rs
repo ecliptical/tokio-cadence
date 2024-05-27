@@ -4,6 +4,7 @@
 //! A collection of Cadence [Metric Sink](https://docs.rs/cadence/0.22/cadence/trait.MetricSink.html)
 //! implementations that operate asynchronously using [Tokio](https://docs.rs/tokio/0.2/tokio).
 
+use std::{future::Future, pin::Pin};
 use tokio::time::Duration;
 
 pub mod builder;
@@ -29,3 +30,5 @@ pub const DEFAULT_MAX_BATCH_DELAY_MS: u64 = 1000;
 /// Default maximum delay to wait before submitting accumulated metrics as a single batch.
 #[allow(deprecated)]
 pub const DEFAULT_MAX_BATCH_DELAY: Duration = Duration::from_millis(DEFAULT_MAX_BATCH_DELAY_MS);
+
+pub(crate) type MetricFuture = Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>;

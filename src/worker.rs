@@ -47,6 +47,7 @@ pub trait TrySend: UnwindSafe + RefUnwindSafe {
 // Yes, really! :-(
 // I can't figure out how to genericize these functions without boxing futures or copying bytes...
 #[doc(hidden)]
+#[allow(clippy::module_name_repetitions)]
 #[macro_export]
 #[allow(clippy::module_name_repetitions)]
 macro_rules! define_worker {

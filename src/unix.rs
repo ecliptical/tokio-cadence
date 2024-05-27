@@ -5,11 +5,9 @@
 use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};
 
 use std::{
-    future::Future,
     io::Result,
     panic::{RefUnwindSafe, UnwindSafe},
     path::Path,
-    pin::Pin,
 };
 
 use tokio::{
@@ -21,6 +19,7 @@ use crate::{
     builder::Builder,
     define_worker,
     worker::{Cmd, TrySend},
+    MetricFuture,
 };
 
 impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
@@ -29,12 +28,7 @@ impl<T: AsRef<Path> + Send + Sync + Unpin + 'static> Builder<T, UnixDatagram> {
     /// # Errors
     ///
     /// Returns an error when the configured queue capacity is 0.
-    pub fn build(
-        self,
-    ) -> MetricResult<(
-        TokioBatchUnixMetricSink,
-        Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
-    )> {
+    pub fn build(self) -> MetricResult<(TokioBatchUnixMetricSink, MetricFuture)> {
         if self.queue_cap == 0 {
             return Err(MetricError::from((
                 MetricErrorKind::InvalidInput,
@@ -117,10 +111,7 @@ impl TokioBatchUnixMetricSink {
     pub fn from<T: AsRef<Path> + Send + Sync + Unpin + 'static>(
         path: T,
         socket: UnixDatagram,
-    ) -> MetricResult<(
-        Self,
-        Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
-    )> {
+    ) -> MetricResult<(Self, MetricFuture)> {
         Self::builder(path, socket).build()
     }
 

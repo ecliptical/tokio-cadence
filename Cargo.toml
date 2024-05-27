@@ -10,7 +10,7 @@ edition = "2021"
 rust-version = "1.63"
 
 [dependencies]
-cadence = "1.2"
+cadence = "1.4"
 log = "0.4"
 tokio = { version = "1", features = ["net", "sync", "time"] }
 

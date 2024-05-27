@@ -5,11 +5,9 @@
 use cadence::{ErrorKind as MetricErrorKind, MetricError, MetricResult, MetricSink};
 
 use std::{
-    future::Future,
     io::Result,
     net::{SocketAddr, ToSocketAddrs},
     panic::{RefUnwindSafe, UnwindSafe},
-    pin::Pin,
 };
 
 use tokio::{
@@ -22,6 +20,7 @@ use crate::{
     builder::Builder,
     define_worker,
     worker::{Cmd, TrySend},
+    MetricFuture,
 };
 
 impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
@@ -30,12 +29,7 @@ impl<T: ToSocketAddrs> Builder<T, UdpSocket> {
     /// # Errors
     ///
     /// Returns an error when unable to resolve the configured host address, or when the configured queue capacity is 0.
-    pub fn build(
-        self,
-    ) -> MetricResult<(
-        TokioBatchUdpMetricSink,
-        Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
-    )> {
+    pub fn build(self) -> MetricResult<(TokioBatchUdpMetricSink, MetricFuture)> {
         if self.queue_cap == 0 {
             return Err(MetricError::from((
                 MetricErrorKind::InvalidInput,
@@ -122,10 +116,7 @@ impl TokioBatchUdpMetricSink {
     pub fn from<T: ToSocketAddrs>(
         host: T,
         socket: UdpSocket,
-    ) -> MetricResult<(
-        Self,
-        Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
-    )> {
+    ) -> MetricResult<(Self, MetricFuture)> {
         Builder::new(host, socket).build()
     }
 
@@ -150,10 +141,7 @@ impl TokioBatchUdpMetricSink {
         queue_capacity: usize,
         buf_size: usize,
         max_delay: u64,
-    ) -> MetricResult<(
-        Self,
-        Pin<Box<dyn Future<Output = ()> + Send + Sync + 'static>>,
-    )> {
+    ) -> MetricResult<(Self, MetricFuture)> {
         let mut builder = Builder::new(host, socket);
         builder.queue_cap(queue_capacity);
         builder.buf_size(buf_size);
