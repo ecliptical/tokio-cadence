@@ -27,7 +27,7 @@ Add `cadence`, `tokio`, and `tokio-cadence` to your `Cargo.toml`:
 [dependencies]
 cadence = "1"
 tokio = { version = "1", features = ["full"] }
-tokio-cadence = "0.5"
+tokio-cadence = "0.6"
 ```
 
 ## Usage
