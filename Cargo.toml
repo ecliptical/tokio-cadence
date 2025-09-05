@@ -1,7 +1,7 @@
 [package]
 name = "tokio-cadence"
 description = "Tokio-based metric sinks for Cadence "
-version = "0.6.0"
+version = "0.7.0"
 repository = "https://github.com/ecliptical/tokio-cadence"
 authors = ["Peter Nehrer <pnehrer@eclipticalsoftware.com>"]
 license = "MIT"
@@ -10,7 +10,7 @@ edition = "2021"
 rust-version = "1.70"
 
 [dependencies]
-cadence = "1.5"
+cadence = "1.6"
 log = "0.4"
 tokio = { version = "1", features = ["net", "sync", "time"] }
 
