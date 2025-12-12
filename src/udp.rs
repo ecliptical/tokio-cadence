@@ -198,12 +198,14 @@ mod tests {
 
     #[tokio::test]
     async fn emit() -> MetricResult<()> {
+        const MSG: &str = "test";
+
         pretty_env_logger::try_init().ok();
 
         let server_socket = UdpSocket::bind("127.0.0.1:0").await?;
         let server_addr = server_socket.local_addr()?;
 
-        debug!("server socket: {}", server_addr);
+        debug!("server socket: {server_addr}");
 
         let socket = UdpSocket::bind("0.0.0.0:0").await?;
 
@@ -214,7 +216,6 @@ mod tests {
 
         let worker = spawn(fut);
 
-        const MSG: &str = "test";
         let n = sink.emit(MSG)?;
         assert_eq!(MSG.len(), n);
 
@@ -238,25 +239,26 @@ mod tests {
 
     #[tokio::test]
     async fn emit_multi() -> MetricResult<()> {
+        const BUF_SIZE: usize = 10;
+        const MSG: &str = "test_multi";
+
         pretty_env_logger::try_init().ok();
 
         let server_socket = UdpSocket::bind("127.0.0.1:0").await?;
         let server_addr = server_socket.local_addr()?;
 
-        debug!("server socket: {}", server_addr);
+        debug!("server socket: {server_addr}");
 
         let socket = UdpSocket::bind("0.0.0.0:0").await?;
 
         debug!("local socket: {}", socket.local_addr()?);
 
-        const BUF_SIZE: usize = 10;
         let mut builder = Builder::new(format!("127.0.0.1:{}", server_addr.port()), socket);
         builder.buf_size(BUF_SIZE);
         let (sink, fut) = builder.build()?;
 
         let worker = spawn(fut);
 
-        const MSG: &str = "test_multi";
         let n = sink.emit(MSG)?;
         assert_eq!(BUF_SIZE, n);
         let n = sink.emit(MSG)?;

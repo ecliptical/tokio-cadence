@@ -173,12 +173,15 @@ mod tests {
 
     #[tokio::test]
     async fn emit() -> MetricResult<()> {
+        const MSG: &str = "test";
+
         pretty_env_logger::try_init().ok();
 
         let path = temp_dir().join(format!(
             "test_emit-{}.sock",
             UNIX_EPOCH.elapsed().unwrap_or_default().as_millis()
         ));
+
         let server_socket = UnixDatagram::bind(&path)?;
 
         let socket = UnixDatagram::unbound()?;
@@ -187,7 +190,6 @@ mod tests {
 
         let worker = spawn(fut);
 
-        const MSG: &str = "test";
         let n = sink.emit(MSG)?;
         assert_eq!(MSG.len(), n);
 
@@ -211,26 +213,29 @@ mod tests {
 
     #[tokio::test]
     async fn emit_multi() -> MetricResult<()> {
+        const BUF_SIZE: usize = 10;
+        const MSG: &str = "test_multi";
+
         pretty_env_logger::try_init().ok();
 
         let path = temp_dir().join(format!(
             "test_emit_multi-{}.sock",
             UNIX_EPOCH.elapsed().unwrap_or_default().as_millis()
         ));
+
         let server_socket = UnixDatagram::bind(&path)?;
 
         let socket = UnixDatagram::unbound()?;
 
-        const BUF_SIZE: usize = 10;
         let mut builder = TokioBatchUnixMetricSink::builder(path, socket);
         builder.buf_size(BUF_SIZE);
         let (sink, fut) = builder.build()?;
 
         let worker = spawn(fut);
 
-        const MSG: &str = "test_multi";
         let n = sink.emit(MSG)?;
         assert_eq!(BUF_SIZE, n);
+
         let n = sink.emit(MSG)?;
         assert_eq!(BUF_SIZE, n);
 
