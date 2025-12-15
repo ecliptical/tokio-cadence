@@ -59,7 +59,7 @@ jobs:
         env:
           RUSTFLAGS: '-Cinstrument-coverage'
           LLVM_PROFILE_FILE: 'target/coverage/%p-%m.profraw'
-      - uses: cargo-bins/cargo-binstall@v1.16.3
+      - uses: cargo-bins/cargo-binstall@v1.16.4
       - name: Install grcov
         run: cargo binstall --no-confirm grcov@0.10.5
       - name: Run grcov
