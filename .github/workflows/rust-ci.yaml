@@ -14,7 +14,7 @@ jobs:
       - name: Check out the source code
         uses: actions/checkout@v6
       - name: Cache tools
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ hashFiles('Cargo.toml') }}
           path: |
@@ -38,7 +38,7 @@ jobs:
       - name: Check out the source code
         uses: actions/checkout@v6
       - name: Cache tools
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ hashFiles('Cargo.toml') }}
           path: |
@@ -50,24 +50,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy, llvm-tools
-      - name: Build the binary
-        run: cargo build
-        env:
-          RUSTFLAGS: '-Cinstrument-coverage'
       - name: Run unit tests
         run: cargo test
         env:
           RUSTFLAGS: '-Cinstrument-coverage'
           LLVM_PROFILE_FILE: 'target/coverage/%p-%m.profraw'
-      - uses: cargo-bins/cargo-binstall@v1.16.3
-      - name: Install grcov
-        run: cargo binstall --no-confirm grcov@0.10.5
-      - name: Run grcov
-        run: grcov ./target/coverage -s . --binary-path ./target/debug/ --excl-start '^mod\s+tests\s*\{$' -t covdir --branch --ignore-not-existing --keep-only 'src/**' -o ./target/covdir.json
       - name: Generate coverage report
-        uses: ecliptical/covdir-report-action@v0.2
+        uses: ecliptical/covdir-report-action@v0.3
         with:
-          file: ./target/covdir.json
           summary: 'true'
           out: ./target/coverage.md
       - name: Add coverage comment to the pull request
